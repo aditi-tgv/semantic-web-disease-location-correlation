@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Disease Analysis</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    
+    <script id="sparql2json" type="text/xmldata">
+        <!--
+
+        XSLT script to format SPARQL Query Results XML Format into Exhibit JSON format
+
+        Version 1 : jeni tennison (see http://www.jenitennison.com/visualisation/data/SRXtoGoogleVisData.xsl)
+        Version 2 : Li Ding (2009-11-16)  (added one field in header, "label"; replace apos with whitespace)
+
+        -->
+        <!--
+        =============================================
+        BEGIN: XSLT Stylesheet Transform
+        =============================================
+        -->
+        <xsl:stylesheet version="1.0"
+                        xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                        xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                        xmlns:sparql="http://www.w3.org/2005/sparql-results#">
+
+            <xsl:strip-space elements="*" />
+            <xsl:preserve-space elements="sparql:literal" />
+            <xsl:output method="text" />
+
+            <xsl:param name="tqx" />
+
+            <xsl:variable name="defaultNs">
+                <xsl:call-template name="namespace">
+                    <xsl:with-param name="string" select="/rdf:RDF/rdf:Description[1]/rdf:type[1]/@rdf:resource" />
+                </xsl:call-template>
+            </xsl:variable>
+
+            <xsl:template match="sparql:sparql">
+                <xsl:param name="tqx" select="$tqx" />
+
+                <xsl:variable name="reqId">
+                    <xsl:variable name="fromTQX">
+                        <xsl:call-template name="parseTQX">
+                            <xsl:with-param name="param" select="'reqId'" />
+                            <xsl:with-param name="tqx" select="$tqx" />
+                        </xsl:call-template>
+                    </xsl:variable>
+                    <xsl:choose>
+                        <xsl:when test="$fromTQX != ''">
+                            <xsl:value-of select="$fromTQX" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:text>0</xsl:text>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+
+                <xsl:variable name="version">
+                    <xsl:variable name="fromTQX">
+                        <xsl:call-template name="parseTQX">
+                            <xsl:with-param name="param" select="'version'" />
+                            <xsl:with-param name="tqx" select="$tqx" />
+                        </xsl:call-template>
+                    </xsl:variable>
+                    <xsl:choose>
+                        <xsl:when test="$fromTQX != ''">
+                            <xsl:value-of select="$fromTQX" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:text>0.6</xsl:text>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+
+                <xsl:variable name="out">
+                    <xsl:variable name="fromTQX">
+                        <xsl:call-template name="parseTQX">
+                            <xsl:with-param name="param" select="'out'" />
+                            <xsl:with-param name="tqx" select="$tqx" />
+                        </xsl:call-template>
+                    </xsl:variable>
+                    <xsl:choose>
+                        <xsl:when test="$fromTQX != ''">
+                            <xsl:value-of select="$fromTQX" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:text>json</xsl:text>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+
+                <xsl:variable name="responseHandler">
+                    <xsl:variable name="fromTQX">
+                        <xsl:call-template name="parseTQX">
+                            <xsl:with-param name="param" select="'responseHandler'" />
+                            <xsl:with-param name="tqx" select="$tqx" />
+                        </xsl:call-template>
+                    </xsl:variable>
+                    <xsl:choose>
+                        <xsl:when test="$fromTQX != ''">
+                            <xsl:value-of select="$fromTQX" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:text>google.visualization.Query.setResponse</xsl:text>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:value-of select="$responseHandler" />
+                <xsl:text>({</xsl:text>
+                <xsl:text>version:</xsl:text><xsl:value-of select="$version" /><xsl:text>,</xsl:text>
+                <xsl:text>status:'ok',</xsl:text>
+                <xsl:text>reqId:</xsl:text><xsl:value-of select="$reqId" /><xsl:text>,</xsl:text>
+                <xsl:text>table:{</xsl:text>
+                <xsl:apply-templates select="sparql:head" />
+                <xsl:apply-templates select="sparql:results" />
+                <xsl:text>}</xsl:text><!-- end table -->
+                <xsl:text>})</xsl:text>
+            </xsl:template>
+
+            <xsl:template match="sparql:head">
+                <xsl:text>cols:[</xsl:text>
+                <xsl:for-each select="sparql:variable">
+                    <xsl:apply-templates select="." />
+                    <xsl:if test="position() != last()">,</xsl:if>
+                </xsl:for-each>
+                <xsl:text>],</xsl:text>
+            </xsl:template>
+
+            <xsl:template match="sparql:variable">
+                <xsl:variable name="name" select="@name" />
+                <xsl:variable name="binding"
+                              select="(/sparql:sparql/sparql:results/sparql:result/sparql:binding[@name = $name])[1]" />
+                <xsl:text>{id:'</xsl:text>
+                <xsl:value-of select="@name" />
+                <xsl:text>',label:'</xsl:text>
+                <xsl:value-of select="@name" />
+                <xsl:text>',type:'</xsl:text>
+                <xsl:choose>
+                    <xsl:when test="$binding/sparql:uri">string</xsl:when>
+                    <xsl:otherwise>
+                        <xsl:variable name="datatype" select="$binding/sparql:literal/@datatype" />
+                        <xsl:choose>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#decimal'">number</xsl:when>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#integer'">number</xsl:when>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#float'">number</xsl:when>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#double'">number</xsl:when>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#int'">number</xsl:when>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#boolean'">boolean</xsl:when>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#date'">date</xsl:when>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#dateTime'">datetime</xsl:when>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#time'">timeofday</xsl:when>
+                            <xsl:otherwise>
+                                <xsl:variable name="value" select="$binding/sparql:literal" />
+                                <xsl:choose>
+                                    <xsl:when test="string(number($value)) != 'NaN'">number</xsl:when>
+                                    <xsl:when test="$value = 'true' or $value = 'false'">boolean</xsl:when>
+                                    <xsl:otherwise>string</xsl:otherwise>
+                                </xsl:choose>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:otherwise>
+                </xsl:choose>
+                <xsl:text>'}</xsl:text>
+            </xsl:template>
+
+            <xsl:template match="sparql:results">
+                <xsl:text>rows:[</xsl:text>
+                <xsl:for-each select="sparql:result">
+                    <xsl:apply-templates select="." />
+                    <xsl:if test="position() != last()">,</xsl:if>
+                </xsl:for-each>
+                <xsl:text>]</xsl:text>
+            </xsl:template>
+
+            <xsl:template match="sparql:result">
+                <xsl:variable name="result" select="." />
+                <xsl:text>{c:[</xsl:text>
+                <xsl:for-each select="/sparql:sparql/sparql:head/sparql:variable">
+                    <xsl:variable name="name" select="@name" />
+                    <xsl:apply-templates select="$result/sparql:binding[@name = $name]" />
+                    <xsl:if test="position() != last()">,</xsl:if>
+                </xsl:for-each>
+                <xsl:text>]}</xsl:text>
+            </xsl:template>
+
+            <xsl:template match="sparql:binding">
+                <xsl:text>{v:</xsl:text>
+                <xsl:choose>
+                    <xsl:when test="sparql:uri">
+                        <xsl:text>'</xsl:text>
+                        <xsl:value-of select="sparql:uri" />
+                        <xsl:text>'</xsl:text>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:variable name="datatype" select="sparql:literal/@datatype" />
+                        <xsl:choose>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#decimal' or
+                        $datatype = 'http://www.w3.org/2001/XMLSchema#integer' or
+                        $datatype = 'http://www.w3.org/2001/XMLSchema#float' or
+                        $datatype = 'http://www.w3.org/2001/XMLSchema#double' or
+                        $datatype = 'http://www.w3.org/2001/XMLSchema#int' or
+                        (not($datatype) and string(number(sparql:literal)) != 'NaN')">
+                                <xsl:value-of select="sparql:literal" />
+                            </xsl:when>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#date' or
+                        $datatype = 'http://www.w3.org/2001/XMLSchema#dateTime'">
+                                <xsl:text>new Date(</xsl:text>
+                                <xsl:value-of select="substring(sparql:literal, 1, 4)" />
+                                <xsl:text>,</xsl:text>
+                                <xsl:value-of select="substring(sparql:literal, 6, 2)" />
+                                <xsl:text>,</xsl:text>
+                                <xsl:value-of select="substring(sparql:literal, 9, 2)" />
+                                <xsl:if test="$datatype = 'http://www.w3.org/2001/XMLSchema#dateTime'">
+                                    <xsl:text>,</xsl:text>
+                                    <xsl:value-of select="substring(sparql:literal, 12, 2)" />
+                                    <xsl:text>,</xsl:text>
+                                    <xsl:value-of select="substring(sparql:literal, 15, 2)" />
+                                    <xsl:text>,</xsl:text>
+                                    <xsl:value-of select="substring(sparql:literal, 18, 2)" />
+                                </xsl:if>
+                                <xsl:text>)</xsl:text>
+                            </xsl:when>
+                            <xsl:when test="$datatype = 'http://www.w3.org/2001/XMLSchema#time'">
+                                <xsl:text>[</xsl:text>
+                                <xsl:value-of select="substring(sparql:literal, 1, 2)" />
+                                <xsl:text>,</xsl:text>
+                                <xsl:value-of select="substring(sparql:literal, 4, 2)" />
+                                <xsl:text>,</xsl:text>
+                                <xsl:value-of select="substring(sparql:literal, 7, 2)" />
+                                <xsl:text>]</xsl:text>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:text>'</xsl:text>
+                                <xsl:value-of select='translate(translate(sparql:literal,"&apos;"," "),"&#10;","")' />
+                                <xsl:text>'</xsl:text>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:otherwise>
+                </xsl:choose>
+                <xsl:text>}</xsl:text>
+            </xsl:template>
+
+            <xsl:template name="namespace">
+                <xsl:param name="string" />
+                <xsl:param name="namespace" />
+                <xsl:choose>
+                    <xsl:when test="contains($string, '#')">
+                        <xsl:value-of select="concat(substring-before($string, '#'), '#')" />
+                    </xsl:when>
+                    <xsl:when test="contains($string, '/')">
+                        <xsl:call-template name="namespace">
+                            <xsl:with-param name="string" select="substring-after($string, '/')" />
+                            <xsl:with-param name="namespace"
+                                            select="concat($namespace, substring-before($string, '/'), '/')" />
+                        </xsl:call-template>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <xsl:value-of select="$namespace" />
+                    </xsl:otherwise>
+                </xsl:choose>
+            </xsl:template>
+
+            <xsl:template name="parseTQX">
+                <xsl:param name="param" />
+                <xsl:param name="tqx" />
+                <xsl:if test="contains($tqx, concat($param, ':'))">
+                    <xsl:value-of select="substring-before(substring-after(concat($tqx, ';'), concat($param, ':')), ';')" />
+                </xsl:if>
+            </xsl:template>
+
+        </xsl:stylesheet>
+        <!--
+        =============================================
+        END: XSLT Stylesheet Transform
+        =============================================
+        -->
+    </script>
+
+    <script type='text/javascript' src="https://www.gstatic.com/charts/loader.js">
+
+    </script>
+    <script type="text/javascript">
+
+    google.charts.load('current', {'packages':['geochart','table','corechart'], 'mapsApiKey': 'AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY'});
+    google.charts.setOnLoadCallback(handleQueryResponse1);
+
+        //-------------------------------------------------------------------function to handle ABOUT
+         function handleabout(){
+
+        document.getElementById("query_canvas").innerHTML = "<p><i> In our project, using data from multiple disease records we find out which state has more possibilities contracting certain diseases so as to bring awareness for fund allocation in the health-care sector for disease prevention. We do this by a simple ranking by conversion rates in ascending order of reporting locations </i> </p>";                                                   
+    
+         }
+
+          //-------------------------------------------------------------------function to handle DATASETS
+
+        function handledatasets(){
+        document.getElementById("query_canvas").innerHTML = "<p>This demo is based on the following datasets from <a href='http://www.data.gov/'>data.gov</a></p>"+
+                        " <ul>"+
+                        "<li><a href='https://catalog.data.gov/dataset/nndss-table-1gg-spotted-fever-rickettsiosis-confirmed-to-smallpox-e25d3'>Smallpox dataset</a>: <p><i>spotted-fever-rickettsiosis-confirmed-to-smallpox</i></p></li>"+
+                        "<li><a href='https://catalog.data.gov/dataset/nndss-table-1h-cholera-to-coccidioidomycosis-43b90'>Cholera</a>: <p><i>cholera-to-coccidioidomycosis</i></p></li>"+
+                        "<li><a href='https://catalog.data.gov/dataset/nndss-table-1e-botulism-foodborne-to-botulism-other-c466c'>Botulism</a>: <p><i>botulism-foodborne-to-botulism-other</i></p></li>"+
+                        "<li><a href='https://catalog.data.gov/dataset/nndss-table-1ii-tetanus-to-trichinellosis-bdb61'>Tetanus</a>: <p><i>tetanus-to-trichinellosis</i></p></li>"+
+
+                    "</ul>";
+        }
+
+        //-------------------------------------------------------------------function to handle QUERY 1 REPORTING AREAS-common to all diseases
+        function handlequery1(){ //reporting areas-common for all diseases
+
+         var url = 'http://localhost:3030/myDataset/query?query=';
+     // var query1 = "PREFIX ns1: <https://data.cdc.gov/resource/_2993-4v7d/> SELECT DISTINCT ?state WHERE { ?subject ns1:reporting_area ?state }";
+     var query1= "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>"
++"PREFIX ns:<https://data.cdc.gov/resource/_2993-4v7d/>"
++"SELECT ?state ((SUM (xsd:int (?confirmed) ))   as ?tetanus )"
+
++"WHERE {"
+ 
++"?subject3 ns:tetanus_previous_52_weeks_max ?confirmed."
++"?subject3  ns:reporting_area ?state."
++"}"
++"GROUP BY ?state ORDER BY asc(?tetanus)  "  
+        var queryurl1 = url + encodeURIComponent(query1) + "&output=xml";
+        var xmlquery1 = new XMLHttpRequest();
+
+        xmlquery1.open('GET', queryurl1);
+        xmlquery1.setRequestHeader ('Content-type', 'application/x-www-form-urlencoded');
+        xmlquery1.setRequestHeader ('Accept', 'application/sparql-results+xml');
+
+
+        xmlquery1.onreadystatechange = function() {
+            if (xmlquery1.readyState == 4) {
+                if (xmlquery1.status == 200) {
+                    console.log(convertXML2GVDS( xmlquery1.responseXML ));
+                    strRespQ1 = new XMLSerializer().serializeToString( convertXML2GVDS( xmlquery1.responseXML ) );
+                    strJSON = strRespQ1.replace(/(^google\.visualization\.Query\.setResponse\(|\)$)/g,'');
+                    objKeysRegex = /({|,)(?:\s*)(?:')?([A-Za-z_$\.][A-Za-z0-9_ \-\.$]*)(?:')?(?:\s*):/g;// look for object names
+                    strJSONnew = strJSON.replace(objKeysRegex, "$1\"$2\":");// all object names should be double quoted
+                    strJSON = strJSONnew.replace(/\'/g, "\"");
+                    //alert(strJSON);
+                    try {
+                        objJSON = JSON.parse(strJSON);
+                    }
+                    catch(err)
+                    {
+                        return;
+                    }
+                    handleQueryResponse1( objJSON.table );
+
+                }
+                else {
+                    alert("Sparql query error: " + xmlquery1.status + " " + xmlquery1.responseText);
+                }
+            }
+        }
+        xmlquery1.send();
+        }
+
+
+           function handleQueryResponse1(data)
+        {
+            let tableData = new google.visualization.DataTable(data)
+            var container = document.getElementById('query_canvas');
+          
+            var options = {};
+            options['region'] = 'US';
+            options['dataMode'] = 'markers';
+            options['resolution'] = 'provinces';
+            options['enableRegionInteractivity']=true;
+            options['width']=1000;
+            options['height']=1000;
+
+            var geoChart = new google.visualization.GeoChart(document.getElementById('query_canvas'));
+            geoChart.draw(new google.visualization.DataTable(data), options);
+          
+
+            console.log();
+        }
+
+        //-------------------------------------------------------------------function to handle QUERY 2 tetanus statewise number of cases
+        function handlequery2() 
+        {
+
+        var url = 'http://localhost:3030/myDataset/query?query=';
+
+ //var query2= "prefix ns1: <https://data.cdc.gov/resource/rihk-iawc/> SELECT ?Area (COUNT(?Area) as ?Cases) WHERE { ?subject ns1:reporting_area ?Area. ?subject ns1:spotted_fever_rickettsiosis_confirmed_current_week_flag ?c. } GROUP BY ?Area ORDER BY asc(?Cases)"
+ var query2="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>"
++"PREFIX ns: <https://data.cdc.gov/resource/rihk-iawc/>"
++"SELECT ?state ((SUM (xsd:int (?confirmed) ))   as ?smallpox )"
+
++"WHERE {"
+ 
++"?subject3 ns:spotted_fever_rickettsiosis_confirmed_previous_52_weeks_max ?confirmed."
++"?subject3  ns:reporting_area ?state."
++"}"
++"GROUP BY ?state ORDER BY asc(?confirmed)";
+ 
+ var queryurl2 = url + encodeURIComponent(query2) + "&output=xml";
+        var xmlquery2 = new XMLHttpRequest();
+
+        xmlquery2.open('GET', queryurl2);
+        xmlquery2.setRequestHeader ('Content-type', 'application/x-www-form-urlencoded');
+        xmlquery2.setRequestHeader ('Accept', 'application/sparql-results+xml');
+
+
+        xmlquery2.onreadystatechange = function() {
+            if (xmlquery2.readyState == 4) {
+                if (xmlquery2.status == 200) {
+                    console.log(convertXML2GVDS( xmlquery2.responseXML ));
+                    strRespQ1 = new XMLSerializer().serializeToString( convertXML2GVDS( xmlquery2.responseXML ) );
+                    strJSON = strRespQ1.replace(/(^google\.visualization\.Query\.setResponse\(|\)$)/g,'');
+                    objKeysRegex = /({|,)(?:\s*)(?:')?([A-Za-z_$\.][A-Za-z0-9_ \-\.$]*)(?:')?(?:\s*):/g;// look for object names
+                    strJSONnew = strJSON.replace(objKeysRegex, "$1\"$2\":");// all object names should be double quoted
+                    strJSON = strJSONnew.replace(/\'/g, "\"");
+                    //alert(strJSON);
+                    try {
+                        objJSON = JSON.parse(strJSON);
+                    }
+                    catch(err)
+                    {
+                        return;
+                    }
+                    handleQueryResponse2( objJSON.table );
+
+                }
+                else {
+                    alert("Sparql query error: " + xmlquery2.status + " " + xmlquery2.responseText);
+                }
+            }
+        }
+        xmlquery2.send();
+        }
+
+       
+        function handleQueryResponse2(data)
+        {
+            let tableData = new google.visualization.DataTable(data)
+            var container = document.getElementById('query_canvas');
+          
+            var options = {};
+            options['region'] = 'US';
+            options['dataMode'] = 'markers';
+
+            options['resolution'] = 'provinces';
+            options['enableRegionInteractivity']=true;
+            options['width']=1000;
+            options['height']=1000;
+
+            var geoChart = new google.visualization.GeoChart(document.getElementById('query_canvas'));
+            geoChart.draw(new google.visualization.DataTable(data), options);
+
+        }
+
+        
+
+        //-----------------------------------------------function to handle  QUERY 3 cholers reporting area
+
+         function handlequery3() 
+        {
+
+        var url = 'http://localhost:3030/myDataset/query?query=';
+     // var query3 = "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX ns1: <https://data.cdc.gov/resource/rihk-iawc/> SELECT  ?state ( ((SUM (xsd:float (?confirmed) )) / (SUM(xsd:float(?probable))) ) as ?conversion_ratio ) WHERE {"+
+      //              "?subject ns1:spotted_fever_rickettsiosis_confirmed_previous_52_weeks_max ?confirmed. ?subject ns1:spotted_fever_rickettsiosis_probable_previous_52_weeks_max ?probable. ?subject  ns1:reporting_area ?state.}GROUP BY ?state ORDER BY ?state";
+
+    var query3="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>"
++"PREFIX ns:<https://data.cdc.gov/resource/wycc-ffia/>"
++"SELECT ?state ((SUM (xsd:int (?confirmed) ))   as ?cholera )"
+
++"WHERE {"
+ 
++"?subject3 ns:cholera_previous_52_weeks_max ?confirmed."
++"?subject3  ns:reporting_area ?state."
++"}"
++"GROUP BY ?state ORDER BY asc(?confirmed)";
+
+     var queryurl3 = url + encodeURIComponent(query3) + "&output=xml";
+        var xmlquery3 = new XMLHttpRequest();
+
+        xmlquery3.open('GET', queryurl3);
+        xmlquery3.setRequestHeader ('Content-type', 'application/x-www-form-urlencoded');
+        xmlquery3.setRequestHeader ('Accept', 'application/sparql-results+xml');
+
+
+        xmlquery3.onreadystatechange = function() {
+            if (xmlquery3.readyState == 4) {
+                if (xmlquery3.status == 200) {
+                    console.log(convertXML2GVDS( xmlquery3.responseXML ));
+                    strRespQ1 = new XMLSerializer().serializeToString( convertXML2GVDS( xmlquery3.responseXML ) );
+                    strJSON = strRespQ1.replace(/(^google\.visualization\.Query\.setResponse\(|\)$)/g,'');
+                    objKeysRegex = /({|,)(?:\s*)(?:')?([A-Za-z_$\.][A-Za-z0-9_ \-\.$]*)(?:')?(?:\s*):/g;// look for object names
+                    strJSONnew = strJSON.replace(objKeysRegex, "$1\"$2\":");// all object names should be double quoted
+                    strJSON = strJSONnew.replace(/\'/g, "\"");
+                    //alert(strJSON);
+                    try {
+                        objJSON = JSON.parse(strJSON);
+                    }
+                    catch(err)
+                    {
+                        return;
+                    }
+                    handleQueryResponse3( objJSON.table );
+
+                }
+                else {
+                    alert("Sparql query error: " + xmlquery3.status + " " + xmlquery3.responseText);
+                }
+            }
+        }
+        xmlquery3.send();
+        }
+
+       
+        function handleQueryResponse3(data)
+        {
+           // let barData = new google.visualization.DataTable(data)
+           let tableData = new google.visualization.DataTable(data)
+            var container = document.getElementById('query_canvas');
+          
+            var options = {};
+            options['region'] = 'US';
+            options['dataMode'] = 'markers';
+
+            options['resolution'] = 'provinces';
+            options['enableRegionInteractivity']=true;
+            options['width']=1000;
+            options['height']=1000;
+
+            var geoChart = new google.visualization.GeoChart(document.getElementById('query_canvas'));
+            geoChart.draw(new google.visualization.DataTable(data), options);
+
+            console.log();
+
+        }
+       
+
+
+        //botulism
+        function handlequery4() 
+        {
+
+        var url = 'http://localhost:3030/myDataset/query?query=';
+
+   var query4 = "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>"
++"PREFIX ns:<https://data.cdc.gov/resource/_4t6w-ibvk/>"
++"SELECT ?state ((SUM (xsd:int (?confirmed) ))   as ?botulism )"
+
++"WHERE {"
+ 
++"?subject3 ns:botulism_foodborne_previous_52_weeks_max ?confirmed."
++"?subject3  ns:reporting_area ?state."
++"}"
++"GROUP BY ?state ORDER BY asc(?confirmed)  "  
+
+var queryurl4 = url + encodeURIComponent(query4) + "&output=xml";
+        var xmlquery4 = new XMLHttpRequest();
+
+        xmlquery4.open('GET', queryurl4);
+        xmlquery4.setRequestHeader ('Content-type', 'application/x-www-form-urlencoded');
+        xmlquery4.setRequestHeader ('Accept', 'application/sparql-results+xml');
+
+
+        xmlquery4.onreadystatechange = function() {
+            if (xmlquery4.readyState == 4) {
+                if (xmlquery4.status == 200) {
+                    console.log(convertXML2GVDS( xmlquery4.responseXML ));
+                    strRespQ1 = new XMLSerializer().serializeToString( convertXML2GVDS( xmlquery4.responseXML ) );
+                    strJSON = strRespQ1.replace(/(^google\.visualization\.Query\.setResponse\(|\)$)/g,'');
+                    objKeysRegex = /({|,)(?:\s*)(?:')?([A-Za-z_$\.][A-Za-z0-9_ \-\.$]*)(?:')?(?:\s*):/g;// look for object names
+                    strJSONnew = strJSON.replace(objKeysRegex, "$1\"$2\":");// all object names should be double quoted
+                    strJSON = strJSONnew.replace(/\'/g, "\"");
+                    //alert(strJSON);
+                    try {
+                        objJSON = JSON.parse(strJSON);
+                    }
+                    catch(err)
+                    {
+                        return;
+                    }
+                    handleQueryResponse4( objJSON.table );
+
+                }
+                else {
+                    alert("Sparql query error: " + xmlquery4.status + " " + xmlquery4.responseText);
+                }
+            }
+        }
+        xmlquery4.send();
+        }
+
+       
+        function handleQueryResponse4(data)
+        {
+       
+
+       
+      let tableData = new google.visualization.DataTable(data)
+            var container = document.getElementById('query_canvas');
+          
+            var options = {};
+            options['region'] = 'US';
+            options['dataMode'] = 'markers';
+
+            options['resolution'] = 'provinces';
+            options['enableRegionInteractivity']=true;
+            options['width']=1000;
+            options['height']=1000;
+
+            var geoChart = new google.visualization.GeoChart(document.getElementById('query_canvas'));
+            geoChart.draw(new google.visualization.DataTable(data), options);
+        console.log();
+         
+      	
+        }
+
+
+        function handlequery5() 
+        {
+
+        var url = 'http://localhost:3030/myDataset/query?query=';
+     
+      var query5="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>"
++"PREFIX ns: <https://data.cdc.gov/resource/rihk-iawc/>"
++"SELECT ?state ((SUM (xsd:int (?confirmed) ))   as ?smallpox )"
+
++"WHERE {"
+ 
++"?subject3 ns:spotted_fever_rickettsiosis_probable_previous_52_weeks_max   ?confirmed."
++"?subject3  ns:reporting_area ?state."
++"}"
++"GROUP BY ?state ORDER BY desc(?smallpox)";
+        var queryurl5 = url + encodeURIComponent(query5) + "&output=xml";
+        var xmlquery5 = new XMLHttpRequest();
+
+        xmlquery5.open('GET', queryurl5);
+        xmlquery5.setRequestHeader ('Content-type', 'application/x-www-form-urlencoded');
+        xmlquery5.setRequestHeader ('Accept', 'application/sparql-results+xml');
+
+
+        xmlquery5.onreadystatechange = function() {
+            if (xmlquery5.readyState == 4) {
+                if (xmlquery5.status == 200) {
+                    console.log(convertXML2GVDS( xmlquery5.responseXML ));
+                    strRespQ1 = new XMLSerializer().serializeToString( convertXML2GVDS( xmlquery5.responseXML ) );
+                    strJSON = strRespQ1.replace(/(^google\.visualization\.Query\.setResponse\(|\)$)/g,'');
+                    objKeysRegex = /({|,)(?:\s*)(?:')?([A-Za-z_$\.][A-Za-z0-9_ \-\.$]*)(?:')?(?:\s*):/g;// look for object names
+                    strJSONnew = strJSON.replace(objKeysRegex, "$1\"$2\":");// all object names should be double quoted
+                    strJSON = strJSONnew.replace(/\'/g, "\"");
+                    //alert(strJSON);
+                    try {
+                        objJSON = JSON.parse(strJSON);
+                    }
+                    catch(err)
+                    {
+                        return;
+                    }
+                    handleQueryResponse5( objJSON.table );
+
+                }
+                else {
+                    alert("Sparql query error: " + xmlquery5.status + " " + xmlquery5.responseText);
+                }
+            }
+        }
+        xmlquery5.send();
+        }
+
+       
+        function handleQueryResponse5(data)
+        {	var newdata = new google.visualization.DataTable(data);
+            var tableOptions =
+          {
+                'title':'Smallpox Probable Cases',
+                'width':1000,
+                'height':2000
+            };
+
+        // define geomap instance - STEP 9
+        var container = document.getElementById('query_canvas');
+        var tableChart = new google.visualization.Table(container);
+        tableChart.draw(newdata, tableOptions);
+
+        console.log();
+       
+        }
+
+
+//Cholera conversion ratio
+        function handlequery6(){ 
+
+var url = 'http://localhost:3030/myDataset/query?query=';
+
+var query6="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>"
++"PREFIX ns: <https://data.cdc.gov/resource/_2993-4v7d/>"
++"PREFIX ns1: <https://data.cdc.gov/resource/wycc-ffia/>"
++"PREFIX ns2: <https://data.cdc.gov/resource/_4t6w-ibvk/>"
++"PREFIX ns3: <https://data.cdc.gov/resource/rihk-iawc/>"
+
+            +"SELECT ((SUM (xsd:int (?confirmed1) )) as ?cholera)"
+            +"((SUM (xsd:int (?confirmed2) ))  as ?botulism )"
+            +" ((SUM (xsd:int (?confirmed3) )) as ?smallpox)"
+            +"WHERE {"
+
+//+"?subject ns:tetanus_previous_52_weeks_max ?confirmed."
+// +"?subject ns:reporting_area ?state."
+ 
++"?subject ns1:cholera_previous_52_weeks_max ?confirmed1."
+
+
++"?subject2 ns2:botulism_foodborne_previous_52_weeks_max ?confirmed2."
+
+ 
++"?subject3 ns3:spotted_fever_rickettsiosis_confirmed_previous_52_weeks_max ?confirmed3."
+
++"}";
+//+"GROUP BY ?state ORDER BY desc(?state) ";
+
+var queryurl6 = url + encodeURIComponent(query6) + "&output=xml";
+var xmlquery6 = new XMLHttpRequest();
+
+xmlquery6.open('GET', queryurl6);
+xmlquery6.setRequestHeader ('Content-type', 'application/x-www-form-urlencoded');
+xmlquery6.setRequestHeader ('Accept', 'application/sparql-results+xml');
+
+
+xmlquery6.onreadystatechange = function() {
+   if (xmlquery6.readyState == 4) {
+       if (xmlquery6.status == 200) {
+           console.log(convertXML2GVDS( xmlquery6.responseXML ));
+           strRespQ1 = new XMLSerializer().serializeToString( convertXML2GVDS( xmlquery6.responseXML ) );
+           strJSON = strRespQ1.replace(/(^google\.visualization\.Query\.setResponse\(|\)$)/g,'');
+           objKeysRegex = /({|,)(?:\s*)(?:')?([A-Za-z_$\.][A-Za-z0-9_ \-\.$]*)(?:')?(?:\s*):/g;// look for object names
+           strJSONnew = strJSON.replace(objKeysRegex, "$1\"$2\":");// all object names should be double quoted
+           strJSON = strJSONnew.replace(/\'/g, "\"");
+           //alert(strJSON);
+           try {
+               objJSON = JSON.parse(strJSON);
+           }
+           catch(err)
+           {
+               return;
+           }
+           handleQueryResponse6( objJSON.table );
+
+       }
+       else {
+           alert("Sparql query error: " + xmlquery6.status + " " + xmlquery6.responseText);
+       }
+   }
+}
+xmlquery6.send();
+}
+
+
+  function handleQueryResponse6(data)
+{
+
+            var newdata = new google.visualization.DataTable(data);
+            var tableOptions =
+          {
+                'title':'Smallpox Probable Cases',
+                'width':1000,
+                'height':2000
+            };
+
+        // define geomap instance - STEP 9
+        var container = document.getElementById('query_canvas');
+        var tableChart = new google.visualization.PieChart(container);
+        tableChart.draw(newdata, tableOptions);
+          
+   console.log();
+}
+
+//comparison
+function handlequery7(){ 
+
+var url = 'http://localhost:3030/myDataset/query?query=';
+
+var query7="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>"
++"PREFIX ns: <https://data.cdc.gov/resource/_2993-4v7d/>"
++"PREFIX ns1: <https://data.cdc.gov/resource/wycc-ffia/>"
++"PREFIX ns2: <https://data.cdc.gov/resource/_4t6w-ibvk/>"
++"PREFIX ns3: <https://data.cdc.gov/resource/rihk-iawc/>"
+
+            +"SELECT ?state ((SUM (xsd:int (?confirmed1) )) as ?cholera)"
+            +"((SUM (xsd:int (?confirmed2) ))  as ?botulism )"
+            +" ((SUM (xsd:int (?confirmed3) )) as ?smallpox)"
+            +"WHERE {"
+
+//+"?subject ns:tetanus_previous_52_weeks_max ?confirmed."
+// +"?subject ns:reporting_area ?state."
+ 
++"?subject ns1:cholera_previous_52_weeks_max ?confirmed1."
++"?subject ns1:reporting_area ?state."
+
++"?subject2 ns2:botulism_foodborne_previous_52_weeks_max ?confirmed2."
++"?subject2 ns2:reporting_area ?state."
+ 
++"?subject3 ns3:spotted_fever_rickettsiosis_confirmed_previous_52_weeks_max ?confirmed3."
++"?subject3  ns3:reporting_area ?state."
++"}"
++"GROUP BY ?state ORDER BY desc(?state) ";
+
+//var query7="PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX ns1: <https://data.cdc.gov/resource/wycc-ffia/> PREFIX ns2: <https://data.cdc.gov/resource/_4t6w-ibvk/> PREFIX ns3: <https://data.cdc.gov/resource/rihk-iawc/> SELECT ?state ((SUM (xsd:int (?confirmed) ))   as ?max_cholera ) ((SUM (xsd:int (?confirmed2) ))  as ?max_botulism ) ((SUM (xsd:int (?confirmed3) )) as ?max_smallpox ) WHERE { ?subject ns1:cholera_previous_52_weeks_max ?confirmed. ?subject ns1:reporting_area ?state. ?subject2 ns2:botulism_foodborne_previous_52_weeks_max ?confirmed2. ?subject2 ns2:reporting_area ?state. ?subject3 ns3:spotted_fever_rickettsiosis_confirmed_previous_52_weeks_max ?confirmed3. ?subject3  ns3:reporting_area ?state. } GROUP BY ?state ORDER BY ?state";
+
+    var queryurl7 = url + encodeURIComponent(query7) + "&output=xml";
+var xmlquery7 = new XMLHttpRequest();
+
+xmlquery7.open('GET', queryurl7);
+xmlquery7.setRequestHeader ('Content-type', 'application/x-www-form-urlencoded');
+xmlquery7.setRequestHeader ('Accept', 'application/sparql-results+xml');
+
+
+xmlquery7.onreadystatechange = function() {
+   if (xmlquery7.readyState == 4) {
+       if (xmlquery7.status == 200) {
+           console.log(convertXML2GVDS( xmlquery7.responseXML ));
+           strRespQ1 = new XMLSerializer().serializeToString( convertXML2GVDS( xmlquery7.responseXML ) );
+           strJSON = strRespQ1.replace(/(^google\.visualization\.Query\.setResponse\(|\)$)/g,'');
+           objKeysRegex = /({|,)(?:\s*)(?:')?([A-Za-z_$\.][A-Za-z0-9_ \-\.$]*)(?:')?(?:\s*):/g;// look for object names
+           strJSONnew = strJSON.replace(objKeysRegex, "$1\"$2\":");// all object names should be double quoted
+           strJSON = strJSONnew.replace(/\'/g, "\"");
+           //alert(strJSON);
+           try {
+               objJSON = JSON.parse(strJSON);
+           }
+           catch(err)
+           {
+               return;
+           }
+           handleQueryResponse7( objJSON.table );
+
+       }
+       else {
+           alert("Sparql query error: " + xmlquery7.status + " " + xmlquery7.responseText);
+       }
+   }
+}
+xmlquery7.send();
+}
+
+
+  function handleQueryResponse7(data)
+{
+    let tableData = new google.visualization.DataTable(data)
+            var container = document.getElementById('query_canvas');
+           
+           
+            var tableOptions =
+          {
+                'title':'TETANUS REPORTING AREAS',
+                'width':1000,
+                'height':2000,
+        
+            };
+            var table = new google.visualization.BarChart(container);
+            table.draw(tableData, tableOptions);
+  
+   console.log();
+}
+
+       
+
+       
+
+        //-------------------------------------------------------------------------------------------------
+// ================================================================================
+// == Convert XML to Google Visualization                                        ==
+// ================================================================================
+
+    function convertXML2GVDS(xml) {
+        // NOTE: See the XSLT Stylesheet Transform below this function
+        //       It is used to transform the SPARQL XML results into Google Visualization JSON
+        domParser = new DOMParser();
+        xsl = domParser.parseFromString(sparql2json.innerHTML, "text/xml");
+
+        // Code for IE...
+        if (window.ActiveXObject)
+        {
+            resultDocument = xml.transformNode(xsl);
+        }
+        // Code for Chrome, Firefox, Opera, etc...
+        else
+        {
+            xsltProcessor = new XSLTProcessor();
+            xsltProcessor.importStylesheet(xsl);
+            resultDocument = xsltProcessor.transformToFragment(xml, document);
+        }
+        return resultDocument;
+    }
+    </script>
+
+</head>
+
+<body onload="handleabout()">
+    <div class="jumbotron">
+        <h1 class="display-4">Pathogen-location analysis</h1>
+        <p>Team #7: Disease Patrol</p>
+
+        <hr class="my-4">
+
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+
+            
+
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                
+                <ul class="navbar-nav mr-auto">
+
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#" onclick="handleabout()">ABOUT OUR PROJECT <span class="sr-only">(current)</span></a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="handledatasets()"> DATASETS</a>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            TETANUS
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="#" onclick="handlequery1()">Reporting areas</a>
+                            
+
+                           <!-- <a class="dropdown-item" href="#" onclick="handlequery2()"> State-wise reports</a> -->
+                        
+                           <!-- <a class="dropdown-item" href="#" onclick="handlequery5()">State-wise conversion rates</a>-->
+                        </div>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            SMALLPOX
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="#" onclick="handlequery2()">Reporting areas</a>
+                         <!--   <a class="dropdown-item" href="#" onclick=""> State-wise reports</a> -->
+                            <a class="dropdown-item" href="#" onclick="handlequery5()">Smallpox Probable cases</a>
+                        </div>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            CHOLERA
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="#" onclick="handlequery3()">Reporting areas</a>
+                         <!--   <a class="dropdown-item" href="#" onclick=""> State-wise reports</a>-->
+                          <!--  <a class="dropdown-item" href="#" onclick="handlequery6()">State-wise conversion rates</a> -->
+                        </div>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            BOTULISM
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                            <a class="dropdown-item" href="#" onclick="handlequery4()">Reporting areas</a>
+                         <!--   <a class="dropdown-item" href="#" onclick=""> State-wise reports</a>-->
+                         <!--   <a class="dropdown-item" href="#" onclick="handlequery6()">Botulism 2018</a>-->
+                        </div>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="handlequery7()"> STATE-WISE COMPARISON</a>
+                        <a class="nav-link" href="#" onclick="handlequery6()"> comparison using maps</a>
+                    </li>
+
+                </ul>
+
+             
+            </div>
+        </nav>
+
+    </div>
+    <div align="center" id='query_canvas'></div>
+    
+</body>
+
+</html>
